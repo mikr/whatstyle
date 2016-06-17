@@ -1,0 +1,1 @@
+350, 21801, 4123, 143961, 56, 1, 593  # clang-format version 3.8.0-2ubuntu3 (tags/RELEASE_380/final)

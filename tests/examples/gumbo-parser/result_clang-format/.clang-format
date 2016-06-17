@@ -1,0 +1,3 @@
+BasedOnStyle: Google
+AlignAfterOpenBracket: DontAlign
+SpaceAfterCStyleCast: true

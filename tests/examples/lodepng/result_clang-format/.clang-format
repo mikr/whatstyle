@@ -1,0 +1,22 @@
+BasedOnStyle: Google
+AlignAfterOpenBracket: AlwaysBreak
+AlignTrailingComments: false
+AllowShortBlocksOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+BraceWrapping:
+  AfterControlStatement: true
+  AfterFunction: true
+  AfterStruct: true
+  BeforeElse: true
+BreakBeforeBraces: Custom
+BreakBeforeTernaryOperators: false
+ColumnLimit: 0
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ContinuationIndentWidth: 0
+Cpp11BracedListStyle: false
+IndentWrappedFunctionNames: true
+MaxEmptyLinesToKeep: 2
+SortIncludes: false
+SpaceBeforeParens: Never
+SpacesBeforeTrailingComments: 1
+Standard: Cpp03

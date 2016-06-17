@@ -1,0 +1,12 @@
+# Best style for the from-files
+indent_columns = 4
+
+# Best style for the to-files
+indent_columns = 4
+nl_fdef_brace = add
+sp_inside_fparen = add
+
+# These options are unique to the to-files:
+nl_fdef_brace = add
+sp_inside_fparen = add
+

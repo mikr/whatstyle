@@ -1,0 +1,4 @@
+BasedOnStyle: Mozilla
+DerivePointerAlignment: true
+SortIncludes: false
+SpaceBeforeParens: Never

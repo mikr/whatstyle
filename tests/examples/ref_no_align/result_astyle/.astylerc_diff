@@ -1,0 +1,7 @@
+# Best style for the from-files
+--min-conditional-indent=0
+
+# Best style for the to-files
+--min-conditional-indent=0
+
+# No style difference found.

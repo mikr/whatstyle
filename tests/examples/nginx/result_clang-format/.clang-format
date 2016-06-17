@@ -1,0 +1,10 @@
+BasedOnStyle: WebKit
+AlignOperands: true
+AlignTrailingComments: true
+AlwaysBreakAfterDefinitionReturnType: All
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeTernaryOperators: false
+DerivePointerAlignment: false
+MaxEmptyLinesToKeep: 2
+PointerAlignment: Right
+SpaceAfterCStyleCast: true

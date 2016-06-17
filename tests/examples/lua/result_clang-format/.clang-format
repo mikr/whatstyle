@@ -1,0 +1,9 @@
+BasedOnStyle: Google
+BreakBeforeBraces: Custom
+ColumnLimit: 0
+DerivePointerAlignment: false
+IndentWrappedFunctionNames: true
+MaxEmptyLinesToKeep: 2
+PointerAlignment: Right
+ReflowComments: false
+SortIncludes: false

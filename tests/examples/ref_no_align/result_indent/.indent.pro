@@ -1,0 +1,4 @@
+-gnu
+-npcs
+-npsl
+-nsaw

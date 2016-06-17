@@ -1,0 +1,16 @@
+# Best style for the from-files
+-kr
+-brf
+
+# Best style for the to-files
+-kr
+-blf
+-prs
+
+# These options are unique to the from-files:
+-brf
+
+# These options are unique to the to-files:
+-blf
+-prs
+

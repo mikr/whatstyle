@@ -1,0 +1,4 @@
+--convert-tabs
+--keep-one-line-blocks
+--max-instatement-indent=45
+--style=1tbs

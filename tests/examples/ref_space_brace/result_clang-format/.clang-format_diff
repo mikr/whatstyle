@@ -1,0 +1,14 @@
+# Best style for the from-files
+BasedOnStyle: Google
+IndentWidth: 4
+
+# Best style for the to-files
+BasedOnStyle: Google
+BreakBeforeBraces: Linux
+IndentWidth: 4
+SpacesInParentheses: true
+
+# These options are unique to the to-files:
+BreakBeforeBraces: Linux
+SpacesInParentheses: true
+

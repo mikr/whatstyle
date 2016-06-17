@@ -1,0 +1,11 @@
+# Best style for the from-files
+BasedOnStyle: WebKit
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Allman
+
+# Best style for the to-files
+BasedOnStyle: WebKit
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Allman
+
+# No style difference found.

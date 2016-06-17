@@ -1,0 +1,12 @@
+# Best style for the from-files
+indent_columns = 4
+indent_with_tabs = 0
+
+# Best style for the to-files
+indent_columns = 4
+indent_continue = -4
+indent_with_tabs = 0
+
+# These options are unique to the to-files:
+indent_continue = -4
+

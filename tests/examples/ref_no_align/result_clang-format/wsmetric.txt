@@ -1,0 +1,1 @@
+0, 0, 0, 0, 6, 0, 1  # clang-format version 3.8.0-2ubuntu3 (tags/RELEASE_380/final)

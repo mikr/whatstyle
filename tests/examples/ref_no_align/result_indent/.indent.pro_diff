@@ -1,0 +1,13 @@
+# Best style for the from-files
+-gnu
+-npcs
+-npsl
+-nsaw
+
+# Best style for the to-files
+-gnu
+-npcs
+-npsl
+-nsaw
+
+# No style difference found.

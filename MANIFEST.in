@@ -1,0 +1,14 @@
+global-exclude *.pyc *.pyo .idea .DS_Store
+
+include whatstyle.py tox.ini README.rst MANIFEST.in LICENSE Vagrantfile
+include .style.yapf
+
+recursive-include tests COPYING LICENSE *.LICENSE
+recursive-include tests *.md *.txt
+recursive-include tests *.c *.cpp *.h *.html *.java *.js *.m *.py *.yapf
+recursive-include tests *.astylerc *.astylerc_diff
+recursive-include tests *.cfg *.cfg_diff
+recursive-include tests *.clang-format *.clang-format_diff
+recursive-include tests *.conf
+recursive-include tests *.pro *.pro_diff
+recursive-include tools *.sh *.py

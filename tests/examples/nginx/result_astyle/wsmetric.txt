@@ -1,0 +1,1 @@
+14, 5502, 692, 50806, 8, 0, 526  # Artistic Style Version 2.05.1

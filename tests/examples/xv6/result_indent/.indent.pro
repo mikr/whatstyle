@@ -1,0 +1,7 @@
+-orig
+-nbc
+-di0
+-i2
+-nsai
+-nsaw
+-ts0

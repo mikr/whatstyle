@@ -1,0 +1,8 @@
+BasedOnStyle: WebKit
+AllowShortIfStatementsOnASingleLine: true
+BraceWrapping:
+  BeforeElse: true
+BreakBeforeBraces: Custom
+Cpp11BracedListStyle: true
+DerivePointerAlignment: true
+MaxEmptyLinesToKeep: 2

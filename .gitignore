@@ -1,0 +1,11 @@
+build
+dist
+*.egg-info
+*.pyc
+*.pyo
+*~
+docs/_build
+.DS_Store
+.idea
+.tox
+.vagrant

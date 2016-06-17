@@ -1,0 +1,5 @@
+BasedOnStyle: Chromium
+BreakBeforeBraces: Allman
+ColumnLimit: 0
+KeepEmptyLinesAtTheStartOfBlocks: true
+SpacesInParentheses: true

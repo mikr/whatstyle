@@ -1,0 +1,1 @@
+28, 1529, 0, 0, 2, 0, 16  # Artistic Style Version 2.05.1

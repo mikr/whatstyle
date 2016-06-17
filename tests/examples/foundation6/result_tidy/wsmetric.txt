@@ -1,0 +1,1 @@
+307, 45570, 0, 0, 20, 0, 379  # HTML Tidy for Linux version 5.2.0

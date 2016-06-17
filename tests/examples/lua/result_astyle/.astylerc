@@ -1,0 +1,7 @@
+--align-pointer=name
+--delete-empty-lines
+--indent=spaces=2
+--keep-one-line-statements
+--pad-header
+--remove-brackets
+--style=java

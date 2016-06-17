@@ -1,0 +1,1 @@
+4, 3000, 0, 0, 2, 0, 1  # Artistic Style Version 2.05.1

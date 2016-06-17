@@ -1,0 +1,11 @@
+# Best style for the from-files
+
+
+# Best style for the to-files
+--pad-paren-in
+--style=allman
+
+# These options are unique to the to-files:
+--pad-paren-in
+--style=allman
+
