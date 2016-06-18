@@ -3910,7 +3910,7 @@ def show_variants(style,               # type: Style
             varfiles.append(tmpfile)
 
     normedfiles, normstyle = varfiles, style
-    optstyles = []
+    optstyles = [[normstyle]]
     for option in styledef_options(formatter.styledefinition):
         stylecombo = formatter.variants_for(option)
         if stylecombo:
