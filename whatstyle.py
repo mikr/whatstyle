@@ -56,6 +56,11 @@ option differences together with the source code differences that they cause.
 
     $ ./whatstyle.py --variants tests/examples/lua/lstate.[ch]
 
+Remove uninteresting options from the variants:
+
+    $ ./whatstyle.py --variants --ignoreopts ColumnLimit,IndentWidth,UseTab \
+                     tests/examples/lua/lstate.[ch]
+
 Show more differences per style variant:
 
     $ ./whatstyle.py --variants --numhunks 5 tests/examples/lua/lstate.[ch]
@@ -640,7 +645,7 @@ def make_exeresult(returncode=0,    # type: int
 
 ParameterSet = namedtuple('ParameterSet', ['formatter', 'difftool', 'mode', 'sourcefactor',
                                            'variantsfactor', 'references', 'maxrounds',
-                                           'bestofround', 'concat', 'ccmode'])
+                                           'ignoreopts', 'bestofround', 'concat', 'ccmode'])
 
 FormatOption = namedtuple('FormatOption', ['opts'])
 
@@ -3629,9 +3634,11 @@ def execall_hash(ec, cache):
 # ----------------------------------------------------------------------
 
 
-def iter_stylecombos(formatter):
-    # type: (CodeFormatter) -> Iterator[FormatOption]
+def iter_stylecombos(formatter, ignoreopts=()):
+    # type: (CodeFormatter, Sequence[str]) -> Iterator[FormatOption]
     for option in styledef_options(formatter.styledefinition):
+        if option_name(option) in ignoreopts:
+            continue
         stylecombo = formatter.variants_for(option)
         if stylecombo:
             yield FormatOption(stylecombo)
@@ -3878,6 +3885,7 @@ def ansi2html(ansidata, enc='utf-8'):
 def show_variants(style,               # type: Style
                   formatter,           # type: CodeFormatter
                   filenames,           # type: List[str]
+                  ignoreopts=(),       # type: Sequence[str]
                   display='ansi',      # type: str
                   enc='utf-8',         # type: str
                   condensed=True,      # type: bool
@@ -3912,6 +3920,8 @@ def show_variants(style,               # type: Style
     normedfiles, normstyle = varfiles, style
     optstyles = [[normstyle]]
     for option in styledef_options(formatter.styledefinition):
+        if option_name(option) in ignoreopts:
+            continue
         stylecombo = formatter.variants_for(option)
         if stylecombo:
             styles = [copy_with_optgroup(normstyle, optgroup) for optgroup in stylecombo
@@ -5003,7 +5013,7 @@ def find_best_style(params, filenames, metric, additive=True):
     distfunc, metricdesc = distfunc_for_metric(metric)
     bestdist = None
 
-    allcombos = list(iter_stylecombos(formatter))
+    allcombos = list(iter_stylecombos(formatter, params.ignoreopts))
 
     evaluations = []  # type: List[AttemptResult]
 
@@ -6148,15 +6158,17 @@ def whatstyle(args, parser):
         formatter.allow_encoding_change = args.allow_encoding_change
         formatter.register_options()
 
+        ignoreopts = args.ignoreopts.split(',') if args.ignoreopts else []
         params = ParameterSet(formatter, difftool, args.mode, args.sourcefactor,
                               args.variantsfactor, args.references, args.maxrounds,
-                              args.bestofround, args.concat, args.concurrent)
+                              ignoreopts, args.bestofround, args.concat, args.concurrent)
         result = find_style(params, filenames, language=args.language)
         exit_code = handle_results(args,
                                    formatter,
                                    filenames,
                                    args.mode,
                                    args.references,
+                                   ignoreopts,
                                    result,
                                    args.diff,
                                    args.uncondensed,
@@ -6237,6 +6249,7 @@ def handle_results(args,             # type: argparse.Namespace
                    filenames,        # type: List[str]
                    mode,             # type: str
                    references,       # type: bool
+                   ignoreopts,       # type: Sequence[str]
                    result,           # type: Union[StyleDist, Tuple[StyleDist, StyleDist]]
                    showdiff,         # type: bool
                    uncondensed,      # type: bool
@@ -6322,6 +6335,7 @@ def handle_results(args,             # type: argparse.Namespace
             show_variants(beststyle,
                           formatter,
                           filenames,
+                          ignoreopts=ignoreopts,
                           display=display,
                           enc=args.charset,
                           condensed=not uncondensed,
@@ -6406,6 +6420,9 @@ def cmdline_parser(parserclass=argparse.ArgumentParser):
                         help='style to start the search with (optional)\n'
                         'e.g. "{based_on_style: pep8, column_limit: 79}",\n'
                         'the specific options must be known by the formatter')
+    parser.add_argument('--ignoreopts',
+                        help='comma-separated list of options to ignore\n'
+                        'e.g. indent_width,column_limit')
     parser.add_argument('--language',
                         '-l',
                         help='explicitly tell the formatter the language to expect')
