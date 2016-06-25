@@ -134,7 +134,7 @@ import json
 try:
     import multiprocessing.pool  # type: ignore
 except ImportError:
-    multiprocessing = None  # type: module
+    multiprocessing = None  # type: Optional[module]
 
 import operator
 import os
@@ -189,8 +189,8 @@ try:
     BytesPair = Tuple[bytes, bytes]
     OptionValue = Union[str, bool, int, 'Style']
     Option = Tuple[str, str, List[OptionValue], Optional['StyleDef']]
-    StyleDist = Tuple['Style', Sequence[int]]
-    CallArgs = Tuple[List[Any], Dict[Any, Any]]
+    StyleDist = Tuple[Optional['Style'], Optional[Sequence[int]]]
+    CallArgs = Tuple[Sequence[Any], Dict[Any, Any]]
 except ImportError:
     pass
 
@@ -290,10 +290,10 @@ args_info = set()  # type: Set[str]
 args_debug = set()  # type: Set[str]
 args_verbose = set()  # type: Set[str]
 
-LOGFILE = None  # type: str
-LOGFILEFP = None  # type: IO
-LOGSPLITDIR = None  # type: str
-MESSAGE_CATEGORY_FILES = None  # type: Dict[str, IO]
+LOGFILE = None  # type: Optional[str]
+LOGFILEFP = None  # type: Optional[IO[Any]]
+LOGSPLITDIR = None  # type: Optional[str]
+MESSAGE_CATEGORY_FILES = None  # type: Optional[Dict[str, IO[Any]]]
 
 NO_PROGRESS = False
 
@@ -657,7 +657,7 @@ AttemptResult = namedtuple('AttemptResult', ['distance', 'formatstyle'])
 # If we would use any Python packages outside the standard library we could
 # use colorama as well. But we don't so we include limited ANSI color support here.
 
-COLOR_SUPPORT = None
+COLOR_SUPPORT = None  # type: Optional[bool]
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)
 BACKGROUNDCOLOR_OFFSET = 10
@@ -767,7 +767,7 @@ def report_progress(text, fmtnr=0, fmtcount=0, diffnr=None, diffcount=None, prev
     if not reporting_progress():
         return ''
     text = '\r%s#formatted %s' % (text, progresspair(fmtnr, fmtcount))
-    if diffnr is not None:
+    if diffnr is not None and diffcount is not None:
         text += '  #compared %s' % progresspair(diffnr, diffcount)
     return report_text(text, prev=prev)
 
@@ -784,7 +784,7 @@ def copyfile(src, dst):
 
 
 def rawstream(fp):
-    # type: (Optional[IO]) -> Optional[IO[bytes]]
+    # type: (IO[Any]) -> IO[bytes]
     if PY3:
         try:
             return fp.buffer  # type: ignore
@@ -795,12 +795,11 @@ def rawstream(fp):
 
 
 def write(s, fp=None):
-    # type: (Union[str, bytes], Optional[IO]) -> None
+    # type: (Union[str, bytes], Optional[IO[Any]]) -> None
     """Write s to the binary stream fp (default is stdout).
     """
-    if fp is None:
-        fp = sys.stdout
-    rawstream(fp).write(bytestr(s))
+    efp = fp if fp is not None else sys.stdout
+    rawstream(efp).write(bytestr(s))
 
 
 def outline(s=b'', end=b'\n', fp=None):
@@ -911,7 +910,7 @@ def is_executable(filename):
 
 
 def which(program):
-    # type: (str) -> str
+    # type: (str) -> Optional[str]
     program = exename(program)
     fpath, _ = os.path.split(program)
     if fpath:
@@ -972,7 +971,7 @@ def tracebackwrapper(func, args, kwargs):
 
 
 def iter_parallel_report(func,  # type: Callable[..., Any]
-                         args_lists,  # type: List[Tuple[CallArgs]]
+                         args_lists,  # type: Sequence[CallArgs]
                          ccmode=CC_PROCESSES):
     # type: (...) -> Iterator[Union[ExeResult, ExcInfo]]
     if ccmode == CC_OFF or len(args_lists) <= 1 or not multiprocessing:
@@ -1015,7 +1014,7 @@ def iter_parallel_report(func,  # type: Callable[..., Any]
 
 
 def iter_parallel(func,        # type: Callable
-                  args_lists,  # type: List[Tuple[CallArgs]]
+                  args_lists,  # type: Sequence[CallArgs]
                   ccmode=CC_PROCESSES):
     # type: (...) -> Iterator[Any]
     if not args_lists:
@@ -1037,7 +1036,7 @@ def iter_parallel(func,        # type: Callable
                     if not isinstance(tb, types.TracebackType):
                         tbtext = tb
                         tb = None
-                    reraise(t, v, tb)  # type: ignore
+                    reraise(t, v, tb)
                 else:
                     yield result
             except Exception:
@@ -1246,12 +1245,12 @@ class CodeFormatter(object):
     styledump_argument = None  # type: str
 
     def __init__(self, exe, cache=None):
-        # type: (str, Cache) -> None
+        # type: (str, Optional[Cache]) -> None
         if not os.path.isabs(exe):
-            exe = which(exe)
+            exe = which(exe)  # type: ignore
         self.exe = unifilename(exe)
         self.cache = cache
-        self._styledefinition = None  # type: StyleDef
+        self._styledefinition = styledef_make()
         self.allow_encoding_change = False
         self.languages = []  # type: List[str]
 
@@ -1492,7 +1491,7 @@ class CodeFormatter(object):
         self.tempfiles_for_mode(mode).add(tmpfilename)
 
     def remove_tempfiles(self, mode=None):
-        # type: (int) -> None
+        # type: (Optional[int]) -> None
         if mode is None:
             self.remove_tempfiles(LOCALTMP)
             self.remove_tempfiles(GLOBALTMP)
@@ -1862,7 +1861,7 @@ class ClangFormatter(CodeFormatter):
     styledump_argument = '-dump-config'
 
     def __init__(self, exe, cache=None):
-        # type: (str, Cache) -> None
+        # type: (str, Optional[Cache]) -> None
         super(ClangFormatter, self).__init__(exe, cache=cache)
 
     def register_options(self):
@@ -2420,7 +2419,7 @@ class HtmlTidyFormatter(CodeFormatter):
         exeresult = run_executable(self.exe, ['-xml-config'], cache=self.cache)
         buf = BytesIO(exeresult.stdout)
 
-        optionname = None  # type: str
+        optionname = None  # type: Optional[str]
         optiontype = None
         example = None
         options = []
@@ -2428,7 +2427,7 @@ class HtmlTidyFormatter(CodeFormatter):
         for event, elem in ETree.iterparse(buf, events=('start', 'end')):
             tag = elem.tag
             if event == 'end':
-                if tag == 'option':
+                if optionname is not None and tag == 'option':
                     # First ignore some options
                     if optionname.startswith('show-'):
                         continue
@@ -2447,8 +2446,11 @@ class HtmlTidyFormatter(CodeFormatter):
                     else:
                         # Remove comments from the option values
                         # e.g. 0 (Tidy Classic), 1 (Priority 1 Checks), ...
-                        example = re.sub(r'\s*\(.*?\)', '', example)
-                        configs = example.split(', ')
+                        if example is not None:
+                            example = re.sub(r'\s*\(.*?\)', '', example)
+                            configs = example.split(', ')  # type: List[str]
+                        else:
+                            configs = []
                         if not configs:
                             continue
                         optvalues = [typeconv(c) for c in configs]
@@ -2500,10 +2502,12 @@ class HtmlTidyFormatter(CodeFormatter):
 
     def effective_style(self, style):
         # type: (Style) -> Style
+        stylevalues = style_make()
         dump = self.style_dump(style)
+        if dump is None:
+            return stylevalues
         typepos = -1
         valuepos = -1
-        stylevalues = style_make()
         for line in dump.splitlines():
             if typepos < 0:
                 typepos = line.find('Type')
@@ -2922,6 +2926,8 @@ class ArtisticStyleFormatter(CodeFormatter):
                     set_option(formatstyle, optionname, value)
         sourcedata = readbinary(sourcefile)
         data = self.formatcode(formatstyle, sourcedata, filename=sourcefile)
+        if data is None:
+            data = b''
         writebinary(destfile, data)
 
 # ----------------------------------------------------------------------
@@ -2978,10 +2984,11 @@ def filesha(filename):
 
 
 def filemetadata(filename):
-    # type: (str) -> FileMeta
-    filename = which(filename)
-    if filename is None:
+    # type: (str) -> Optional[FileMeta]
+    p_filename = which(filename)
+    if p_filename is None:
         return None
+    filename = p_filename
     s = os.stat(filename)
     if filename != sys.executable:
         result = run_executable(filename, ['--version'])
@@ -3037,7 +3044,7 @@ class SqliteKeyValueStore(KeyValueStore):
     }
 
     def __init__(self, database, tabledesc=None, timestamp=False):
-        # type: (str, Dict[str, str], bool) -> None
+        # type: (str, Optional[Dict[str, str]], bool) -> None
         self.database = database
         if tabledesc is None:
             tabledesc = self.prefixdesc()
@@ -3049,18 +3056,19 @@ class SqliteKeyValueStore(KeyValueStore):
         self.kv_mget = self._sqmget.format(**tabledesc)
         self.kv_put = self._sqput.format(**tabledesc)
         self.kv_delete = self._sqdelete.format(**tabledesc)
-        self._connection = None  # type: sqlite3.Connection
+        self._connection = None  # type: Optional[sqlite3.Connection]
         self.sqlite_limit_variable_number = 999
         self.support_mget = True
 
     @classmethod
     def prefixdesc(cls, desc=None, prefix=None):
-        # type: (Optional[Dict[str, str]], str) -> Dict[str, str]
+        # type: (Optional[Dict[str, str]], Optional[str]) -> Dict[str, str]
         if desc is None:
             if prefix is None:
                 prefix = cls.defaultprefix
             desc = cls.tabledescription
-        return dict((k, prefix + v) for k, v in desc.items())
+        eprefix = prefix if prefix is not None else ''
+        return dict((k, eprefix + v) for k, v in desc.items())
 
     @property
     def conn(self):
@@ -3125,7 +3133,7 @@ class DedupKeyValueStore(SqliteKeyValueStore):
     """
 
     def __init__(self, database, tabledesc=None):
-        # type: (str, Dict[str, str]) -> None
+        # type: (str, Optional[Dict[str, str]]) -> None
         dedupdesc = self.prefixdesc(tabledesc, 'dds_')
         contentdesc = self.prefixdesc(tabledesc, 'ddc_')
         self.kvstore = SqliteKeyValueStore(database, tabledesc=contentdesc)
@@ -3179,11 +3187,11 @@ class Cache(object):
     ZLIB_COMPRESSION_LEVEL = 6
 
     def __init__(self, database, tabledesc=None):
-        # type: (str, Dict[str, str]) -> None
+        # type: (str, Optional[Dict[str, str]]) -> None
         self.cachefilename = database
         self.tabledesc = tabledesc
         self.exemetainfo = {}  # type: Dict[str, bytes]
-        self.kvstore = None  # type: Union[DedupKeyValueStore, HexKeyValueStore]
+        self.kvstore = KeyValueStore()
         self.open()
 
     def open(self):
@@ -3574,12 +3582,13 @@ def run_executables(execalls, cache=None, ccmode=CC_PROCESSES):
         return pack_exeresult(exeresult.returncode, exeresult.stdout, exeresult.stderr)
 
     # Package the execalls for eventuall multiprocessing
-    args_lists = [((ec.exe, ec.cmdargs), {'stdindata': ec.stdindata}) for ec in execalls]
+    args_lists = [((ec.exe, ec.cmdargs), {'stdindata': ec.stdindata})
+                  for ec in execalls]  # type: List[CallArgs]
 
     cachedresults = []
-    jobs = []
-    keys = []
-    jobindices = []
+    jobs = []  # type: List[CallArgs]
+    keys = []  # type: List[str]
+    jobindices = []  # type: List[int]
     if cache is not None:
         qkeys = [execall_hash(ec, cache) for ec in execalls]
         qresults = cache.mget(qkeys)
@@ -3821,7 +3830,7 @@ def generate_ansihtml(source):
     # type: (str) -> Iterable[str]
     foreground = None
     background = None
-    start = None
+    start = None  # type: Optional[int]
     lastpos = 0
 
     def addhtml(textfragment):
@@ -4050,7 +4059,7 @@ def iter_tables(all_stylediff_pairs,  # type: List[StyleDiffSourcePairs]
 
     idx = 0
     grouped_sdpairs = itertools.groupby(all_stylediff_pairs, left_diff)
-    groups = []  # type: ignore
+    groups = []  # type: List[CallArgs]
     grouped_sdp = sorted([(key, list(pairs)) for key, pairs in grouped_sdpairs])
     for sdleft, stylediff_pairs in grouped_sdp:
         args_lists = []
@@ -4059,7 +4068,8 @@ def iter_tables(all_stylediff_pairs,  # type: List[StyleDiffSourcePairs]
                 args_lists.append((from_to_texts, pairs, numhunks, numlines, wrapcolumn, idx,
                                    enc))
                 idx += 1
-        groups.append(((args_lists, ), {}))
+        grouparg = (args_lists, ), {}  # type: CallArgs
+        groups.append(grouparg)
     for tidx, tables in enumerate(iter_parallel(calc_diff_groups, groups, ccmode=ccmode)):
         yield tables, tidx, len(groups)
 
@@ -4134,14 +4144,14 @@ def calc_diff_groups(args_lists):
         num_uncrucial = numhunks - num_crucial
         # We always show all crucial hunks and additionally as many uncrucial ones
         # as numhunks permits.
-        start, tbody, end = None, None, None
+        start, tbody, end = '', '', ''
         for start, tbody, end, crucial in bodyparts:
             if crucial:
                 tbodies.append(tbody)
             elif num_uncrucial > 0:
                 tbodies.append(tbody)
                 num_uncrucial -= 1
-        if start is not None:
+        if tbodies:
             table = ''.join([start] + tbodies + [end])
             tables.append(table)
     return tables
@@ -4230,6 +4240,7 @@ def group_differences(normstyle,  # type: Style
 
         all_option_style_runs.append(contentstyles)
 
+    assert basesource is not None
     for contentstyles in all_option_style_runs:
         num_relevant_options += 1
         stylediff_pairs = StyleDiffSourcePairs()
@@ -4327,9 +4338,9 @@ def group_consecutive(formatter, styles, condensed):
     UseTab: ForIndentation, Never
     """
     prevstyle = None
-    commonkeypath = None
+    commonkeypath = ''
     results = []  # type: List[Tuple[str, Style, Any]]
-    combined = []  # type: List[Any]
+    combined = []  # type: List[OptionValue]
     for style in styles:
         if prevstyle is not None:
             unique_from, unique_to = deep_difference(prevstyle, style)
@@ -4352,7 +4363,7 @@ def group_consecutive(formatter, styles, condensed):
                 combined = []
         prevstyle = style
 
-    results.append((commonkeypath, prevstyle, combined))
+    results.append((commonkeypath, prevstyle, combined))  # type: ignore
     resultstyles = []
     for commonkeypath, style, combined in results:
         if combined:
@@ -4360,7 +4371,6 @@ def group_consecutive(formatter, styles, condensed):
             # The combined values might be in a nested option.
             path = commonkeypath.split('.')
             nstyle = style
-            values = None  # type: OptionValue
             while len(path) > 1:
                 nstyle = nstyle[path.pop(0)]
             if len(combined) > 1:
@@ -4368,7 +4378,7 @@ def group_consecutive(formatter, styles, condensed):
                 values = ', '.join(combined)  # type: ignore
             else:
                 # This could be a nested option
-                values = combined[0]
+                values = combined[0]  # type: ignore
             nstyle[path[0]] = values
         resultstyles.append(style)
     return resultstyles
@@ -4379,8 +4389,8 @@ def group_ranges(elements):
     """Group integer elements into ranges but keep the non-integer values as well, e.g.
     [78, 79, 80, 81, 'true', 'false'] => ['78-81', 'true', 'false']
     """
-    start = None  # type: OptionValue
-    end = None  # type: OptionValue
+    start = None  # type: Optional[OptionValue]
+    end = None  # type: Optional[OptionValue]
     groups = []  # type: List[OptionValue]
     prev = None  # type: Any
     for x in elements:
@@ -4647,7 +4657,7 @@ LINENRSEP_LEN = len(LINENRSEP)
 
 
 def htmldiff2ansi(htmldata, enc, linenumbers=False, fp=None):
-    # type: (str, str, bool, IO) -> None
+    # type: (str, str, bool, Optional[IO[Any]]) -> None
     tree = tree_from_html(htmldata, enc=enc)
     difftype_colors = {
         'diff_add': GREEN + BACKGROUNDCOLOR_OFFSET,
@@ -4656,7 +4666,7 @@ def htmldiff2ansi(htmldata, enc, linenumbers=False, fp=None):
     }
 
     def emit(text, colorvalue=None):
-        # type: (Union[str, bytes], Optional[int]) -> None
+        # type: (Union[str, bytes, None], Optional[int]) -> None
         if text:
             if isinstance(text, binary_type):
                 s = text.decode(enc, 'replace')  # type: str
@@ -4702,7 +4712,7 @@ def htmldiff2ansi(htmldata, enc, linenumbers=False, fp=None):
                 for tdidx, td in enumerate(tr.findall('td')):
                     if td.attrib.get('class') == 'diff_header':
                         line, rawline = [], []
-                        lnrcolumn = unistr(td.text or '')
+                        lnrcolumn = unistr(td.text or '')  # type: ignore
                         # Always display the line continuation character but the
                         # linenumber only if requested.
                         if lnrcolumn and (linenumbers or not re_number.match(lnrcolumn)):
@@ -4729,13 +4739,13 @@ def unescape_ill_surrencode(text, enc='utf-8'):
 
 
 def soutline(s='', enc='utf-8', fp=None):
-    # type: (str, str, IO) -> None
+    # type: (str, str, Optional[IO[Any]]) -> None
     data = unescape_ill_surrencode(s, enc=enc)
     write(data + b'\n', fp=fp)
 
 
 def emit_hunks(all_difflines, enc='utf-8', fp=None):
-    # type: (List[List[List[TextPair]]], str, IO) -> None
+    # type: (List[List[List[TextPair]]], str, Optional[IO[Any]]) -> None
     """Writes the diff lines to fp.
     all_difflines is a list of hunks.
     Each hunk is a pair (left, right) of lists of linepairs (ansicoloredline, rawline).
@@ -4871,7 +4881,7 @@ def shatempfile(filename, content):
 
 
 def create_variant_files(params, filenames, metric):
-    # type: (ParameterSet, List[str], int) -> Tuple[List[str], Style]
+    # type: (ParameterSet, List[str], int) -> Tuple[List[str], Optional[Style]]
     """Finds the best style for the given parameters, reformats the input
     files in this style, writes the results to temporary files and returns the
     list of these temporary filenames and the style that was chosen.
@@ -5313,7 +5323,8 @@ def parse_style_history():
     """
     styledef = styledef_make()
     versionline = '# Clang '
-    version = None
+
+    version = ''
     configs = []
     haveoptions = False
     versions = []  # type: List[Tuple[str, StyleDef]]
@@ -5350,7 +5361,7 @@ def parse_style_history():
                     styledef_add_option(nopt, nestedstyle)
             haveoptions = True
             if not styledef_options(nestedstyle):
-                nestedstyle = None
+                nestedstyle = None  # type: ignore
             if action == '+':
                 option = option_make(optionname, optiontype, configs, nestedstyle)
                 styledef_add_option(option, styledef)
@@ -5495,7 +5506,7 @@ def find_closest_clang_version(dump_config_text):
     dumpstylenames = set(dump_options.keys())
 
     styleversions = parse_style_history()
-    version = None
+    version = ''
 
     # The best maching versions might contain option values that the installed clang
     # does not support. Setting prefer_older_version to False would prefer the most recent
@@ -5584,7 +5595,7 @@ re_hunk = re.compile(br'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', re.MULTILI
 
 
 def metric_for_mindiff(diffoutput, numlines=None):
-    # type: (bytes, int) -> int
+    # type: (bytes, Optional[int]) -> int
     """Counts the number of additions and deletions in a typical diff output, e.g.:
     --- tests/examples/gumbo-parser/utf8.c	2016-02-01 19:46:47.000000000 +0100
     +++ -	2016-02-21 19:05:40.000000000 +0100
@@ -5824,7 +5835,7 @@ def diff_tools(preferred_tool='auto'):
 
 
 def unified_diff(filename, content2=None):
-    # type: (str, bytes) -> Tuple[int, Iterable[str]]
+    # type: (str, Optional[bytes]) -> Tuple[int, Iterable[str]]
     """This function prints a unified diff of the contents of
     filename and the standard input, when used from the command line
     as follows:
@@ -5837,11 +5848,13 @@ def unified_diff(filename, content2=None):
     +456
     """
     use_stdin = content2 is None
-    if use_stdin:
+    if content2 is None:
         # Read binary input stream
         stdin = rawstream(sys.stdin)
-        content2 = bytestr(stdin.read())
-    exit_code, diff = compute_unified_diff(filename, content2, lineterm='')
+        econtent2 = bytestr(stdin.read())
+    else:
+        econtent2 = content2
+    exit_code, diff = compute_unified_diff(filename, econtent2, lineterm='')
     if use_stdin:
         write('\n'.join(diff))
     return exit_code, diff
@@ -5849,7 +5862,7 @@ def unified_diff(filename, content2=None):
 
 def compute_unified_diff(filename, content2, **kwargs):
     # type: (str, bytes, **Any) -> Tuple[int, Iterable[str]]
-    diff = None
+    diff = ()  # type: Iterable[str]
     exit_code = ERROR
     kw = kwargs.copy()
     if 'n' not in kwargs:
@@ -5992,23 +6005,20 @@ def pagercontext(usepager):
         pagercmdargs = []  # type: List[str]
     else:
         pagercmdargs = systempager_cmdargs()
-    stty = None
-    stty_settings = None
+    stty_settings = ''
     proc = None
     try:
         if pagercmdargs:
             if is_executable(STTY_CMD):
-                stty = STTY_CMD
-                proc = subprocess.Popen([stty, '-g'], stdout=subprocess.PIPE)
-                stty_settings, _ = proc.communicate()
-                if proc.returncode == 0:
+                sproc = subprocess.Popen([STTY_CMD, '-g'], stdout=subprocess.PIPE)
+                stty_settings, _ = sproc.communicate()
+                if sproc.returncode == 0:
                     stty_settings = unistr(stty_settings.strip())
-                else:
-                    stty_settings = None
             proc = subprocess.Popen(pagercmdargs, stdin=subprocess.PIPE)
+            assert proc is not None
             fp = proc.stdin
         yield fp
-        if pagercmdargs:
+        if proc is not None:
             proc.communicate()
     except KeyboardInterrupt:
         # Terminate the pager process
@@ -6016,7 +6026,7 @@ def pagercontext(usepager):
             proc.terminate()
         # Restore stty settings otherwise the terminal might no longer echo input.
         if stty_settings:
-            subprocess.Popen([stty, stty_settings]).communicate()
+            subprocess.Popen([STTY_CMD, stty_settings]).communicate()
         raise
 
 
@@ -6282,9 +6292,10 @@ def handle_results(args,             # type: argparse.Namespace
     if mode == MODE_STYLEDIFF:
         (beststyle1, bestdist1), (beststyle, bestdist) = result
         unique_from, unique_to = deep_difference(beststyle1, beststyle)
-        fp = None
         if output is not None:
             fp = open(output + '_diff', 'wb')
+        else:
+            fp = None
 
         def report_style(colorfunc, text):
             # type: (Callable[[str], str], str) -> None
