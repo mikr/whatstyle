@@ -111,7 +111,7 @@ You think 'git diff' can produce superior diffs for the optimization:
 
 from __future__ import print_function
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 import sys
 
@@ -229,6 +229,7 @@ STDERR_OUTPUT = False
 CEXTS = '.c .h'
 CPPEXTS = '.c++ .h++ .cxx .hxx .cpp .hpp .cc .hh'
 CPPCEXTS = CEXTS + ' ' + CPPEXTS
+SCALAEXTS = '.sc .scala'
 SUPPORTED_EXTS = [
     ['clang-format', '.m .mm .java .js .ts .proto .protodevel .td ' + CPPCEXTS],
     ['yapf', '.py'],
@@ -236,6 +237,8 @@ SUPPORTED_EXTS = [
     ['astyle', '.m .java ' + CPPCEXTS],
     ['indent', '.c .h'],
     ['tidy', '.html .htm'],
+    ['scalariform', SCALAEXTS],
+    ['scalafmt', SCALAEXTS],
 ]
 
 FILENAME_SUBST = '#FILENAME#'
@@ -2929,6 +2932,239 @@ class ArtisticStyleFormatter(CodeFormatter):
         if data is None:
             data = b''
         writebinary(destfile, data)
+
+# ----------------------------------------------------------------------
+
+
+class ScalariformFormatter(CodeFormatter):
+    """Formatter for:
+    Scalariform - a code formatter for Scala.
+    (https://github.com/scala-ide/scalariform)
+    """
+
+    shortname = 'scalariform'
+    configfilename = 'formatterPreferences.properties'
+    language_exts = [['SCALA', SCALAEXTS]]
+
+    def __init__(self, exe, cache=None):
+        super(ScalariformFormatter, self).__init__(exe, cache=cache)
+
+    def register_options(self):
+        # type: () -> None
+        """Parse options from text like this:
+        Preferences:
+          [+|-]alignArguments                                        Enable/disable ...
+          ...
+          [+|-]spacesWithinPatternBinders                            Enable/disable ...
+          -alignSingleLineCaseStatements.maxArrowIndent=[1-100]      Set Maximum number ...
+          -indentSpaces=[1-10]                                       Set Number of spaces ...
+        """
+        exeresult = run_executable(self.exe, ['--help'], cache=self.cache)
+        options = []
+        text = unistr(exeresult.stdout)
+        for m in re.finditer(r'^  (\[\+\|-\]|-)([a-z][a-zA-Z.]+)(?:=\[(\d+)-(\d+)\])?', text,
+                             re.MULTILINE):
+            optionprefix, optionname, start, end = m.groups()
+            if start is None:
+                optiontype = 'bool'
+                configs = [True, False]  # type: List[OptionValue]
+            else:
+                optiontype = 'int'
+                configs = list(inclusiverange(int(start), int(end)))
+            options.append(option_make(optionname, optiontype, configs))
+        self.styledefinition = styledef_make(options)
+
+    def styletext(self, style):
+        # type: (Style) -> str
+        fragments = []
+        for optionname, value in self.sorted_style(style).items():
+            fragments.append('%s=%s' % (optionname, textrepr(value)))
+        return '\n'.join(fragments) + '\n'
+
+    def inlinestyletext(self, style):
+        # type: (Style) -> str
+        return self.styletext(style)
+
+    def cmdargs_for_style(self, formatstyle, filename=None):
+        # type: (Style, Optional[str]) -> List[str]
+        assert isinstance(formatstyle, Style)
+        cmdargs = ['--stdin', '--stdout']
+        for optname, value in sorted(formatstyle.items()):
+            cmdargs.append(self.cmdlineopt(optname, value))
+        return cmdargs
+
+    def cmdlineopt(self, optionname, value):
+        # type: (str, str, OptionValue) -> str
+        option = self.styledefinition[optionname]
+        styletype = option_type(option)
+        if styletype == 'bool':
+            prefix = '+' if value else '-'
+            return prefix + optionname
+        if styletype == 'int':
+            return "-%s=%s" % (optionname, value)
+        else:
+            raise ValueError
+
+    def should_report_error(self, job, jobres):
+        # type: (ExeCall, ExeResult) -> bool
+        if jobres.error is not None:
+            return True
+        return jobres.returncode != 0
+
+    def valid_job_result(self, job, jobres):
+        # type: (ExeCall, ExeResult) -> bool
+        if jobres.error is not None:
+            return False
+        if jobres.returncode != 0:
+            return False
+        return True
+
+    def variants_for(self, option):
+        # type: (Option) -> List[Style]
+
+        stylename = option_name(option)
+        configs = option_configs(option)
+
+        def kvpairs(vs):
+            # type: (Iterable[OptionValue]) -> List[Style]
+            return stylevariants(stylename, vs)
+
+        if configs:
+            return kvpairs(configs)
+        return []
+
+    def reformat(self, sourcefile, destfile, configfile):
+        # type: (str, str, str) -> None
+        data = readbinary(sourcefile)
+        exeresult = run_executable(self.exe, ['--preferenceFile=' + unifilename(configfile),
+                                              '--stdin'],
+                                   stdindata=data)
+        writebinary(destfile, exeresult.stdout)
+
+# ----------------------------------------------------------------------
+
+
+class ScalafmtFormatter(CodeFormatter):
+    """Formatter for:
+    Scalafmt - code formatter for Scala.
+    (https://github.com/olafurpg/scalafmt)
+    """
+
+    shortname = 'scalafmt'
+    _prefer_basestyle = True
+    base_optionname = 'style'
+    base_styles = 'Scala.js default defaultWithAlign'.split()
+    configfilename = '.scalafmt'
+    language_exts = [['SCALA', SCALAEXTS]]
+
+    def __init__(self, exe, cache=None):
+        super(ScalafmtFormatter, self).__init__(exe, cache=cache)
+
+    def register_options(self):
+        # type: () -> None
+        """Parse options from text like this:
+          --maxColumn <value>
+                See ScalafmtStyle scaladoc.
+          --continuationIndentCallSite <value>
+                See ScalafmtStyle scaladoc.
+        """
+        exeresult = run_executable(self.exe, ['--help'], cache=self.cache)
+        options = [option_make(self.base_optionname, 'string', self.base_styles)]
+        options.append(option_make('docs', 'string', ['java', 'scala']))
+        text = unistr(exeresult.stdout)
+
+        def allcombinations(elements):
+            # type: (Sequence[Any]) -> List[Any]
+            result = []  # type: List[Any]
+            for i in range(1, len(elements) + 1):
+                result.extend(itertools.combinations(elements, i))
+            return result
+
+        for m in re.finditer(r'^  --([a-zA-Z]+) <value>', text, re.MULTILINE):
+            optionname = m.group(1)
+            if optionname == 'maxColumn':
+                optiontype = 'int'
+                configs = list(inclusiverange(80, 100))  # type: List[OptionValue]
+            elif optionname.startswith('continuationIndent'):
+                optiontype = 'int'
+                configs = [2, 4, 8]
+            elif optionname in ['javaDocs', 'scalaDocs']:
+                continue
+            else:
+                optiontype = 'bool'
+                configs = [True, False]
+            options.append(option_make(optionname, optiontype, configs))
+        m = re.search(unistr(r'    (=>...........*)'), text, re.MULTILINE)
+        if m:
+            aligntokens = m.group(1).split(',')
+            configs = [','.join(c) for c in allcombinations(aligntokens)]
+            options.append(option_make('alignTokens', 'string', configs))
+        m = re.search(unistr(r'    --rewriteTokens (\S+)'), text, re.MULTILINE)
+        if m:
+            rewritetokens = m.group(1).split(',')
+            configs = [','.join(c) for c in allcombinations(rewritetokens)]
+            options.append(option_make('rewriteTokens', 'string', configs))
+        self.styledefinition = styledef_make(options)
+
+    def styletext(self, style):
+        # type: (Style) -> str
+        fragments = []
+        for optionname, value in self.sorted_style(style).items():
+            fragments.append(' '.join(self.cmdlineopts(optionname, value)))
+        return '\n'.join(fragments) + '\n'
+
+    def inlinestyletext(self, style):
+        # type: (Style) -> str
+        return self.styletext(style)
+
+    def cmdargs_for_style(self, formatstyle, filename=None):
+        # type: (Style, Optional[str]) -> List[str]
+        assert isinstance(formatstyle, Style)
+        cmdargs = []  # type: List[str]
+        for optname, value in self.sorted_style(formatstyle).items():
+            cmdargs.extend(self.cmdlineopts(optname, value))
+        return cmdargs
+
+    def cmdlineopts(self, optionname, value):
+        # type: (str, str, OptionValue) -> List[str]
+        if optionname == 'docs':
+            return ['--%sDocs' % value]
+        return ['--' + optionname, textrepr(value)]
+
+    def should_report_error(self, job, jobres):
+        # type: (ExeCall, ExeResult) -> bool
+        if jobres.error is not None:
+            return True
+        return jobres.returncode != 0
+
+    def valid_job_result(self, job, jobres):
+        # type: (ExeCall, ExeResult) -> bool
+        if jobres.error is not None:
+            return False
+        if jobres.returncode != 0:
+            return False
+        return True
+
+    def variants_for(self, option):
+        # type: (Option) -> List[Style]
+
+        stylename = option_name(option)
+        configs = option_configs(option)
+
+        def kvpairs(vs):
+            # type: (Iterable[OptionValue]) -> List[Style]
+            return stylevariants(stylename, vs)
+
+        if configs:
+            return kvpairs(configs)
+        return []
+
+    def reformat(self, sourcefile, destfile, configfile):
+        # type: (str, str, str) -> None
+        data = readbinary(sourcefile)
+        exeresult = run_executable(self.exe, ['--config', unifilename(configfile)],
+                                   stdindata=data)
+        writebinary(destfile, exeresult.stdout)
 
 # ----------------------------------------------------------------------
 # Functions for the in-memory cache
@@ -5890,6 +6126,7 @@ def formatterclass(fmtname):
     """Returns the class of a formatter given an executable name like
     'yapf' or a version string like 'clang-format version 3.9.0 (trunk)'.
     """
+    fmtname = fmtname.lower()
     for prefix, fmtclass in [
         ('clang-format', ClangFormatter),
         ('LLVM', ClangFormatter),
@@ -5902,8 +6139,10 @@ def formatterclass(fmtname):
         ('Artistic Style', ArtisticStyleFormatter),
         ('tidy', HtmlTidyFormatter),
         ('HTML Tidy', HtmlTidyFormatter),
+        ('scalariform', ScalariformFormatter),
+        ('scalafmt', ScalafmtFormatter),
     ]:
-        if fmtname.startswith(prefix):
+        if fmtname.startswith(prefix.lower()):
             return fmtclass
     return None
 

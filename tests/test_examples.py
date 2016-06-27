@@ -25,8 +25,6 @@
 
 from __future__ import print_function
 
-__version__ = '0.1.0'
-
 import sys
 
 if (((sys.version_info[0] == 2) and (sys.version_info[1] < 7)) or (
@@ -152,6 +150,15 @@ class ExamplesTestCase(unittest.TestCase):
 
     def test_xv6(self):
         self.assertMultiLineEqual('', run_spec({'files': ['xv6/printf.c']}))
+
+    def test_scala(self):
+        filename = 'spark/SparkLR.scala'
+        fmts = whatstyle.choose_formatters([filename], report=False)
+        if not fmts:
+            self.skipTest('no formatters for scala installed')
+            return
+        ignore = '--ignoreopts=alignSingleLineCaseStatements.maxArrowIndent'
+        self.assertMultiLineEqual('', run_spec({'files': [filename], 'extraargs': [ignore]}))
 
     def tearDown(self):
         global CURRENT_TEST
@@ -291,6 +298,9 @@ def run_whatstyle(formatter, spec, inputfiles, resultdir):
     if mode:
         cmdargs.append('--mode')
         cmdargs.append(mode)
+    extraargs = spec.get('extraargs')
+    if extraargs:
+        cmdargs.extend(extraargs)
 
     cmdargs.extend(inputfiles)
     if WHATSTYLE_VIA_SUBPROCESS:

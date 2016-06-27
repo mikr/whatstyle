@@ -14,7 +14,7 @@ without the need to invest hours of reading the formatting tool
 documentation.
 
 The currently supported formatters are `clang-format`_, YAPF_, Tidy_, indent_,
-`Artistic Style`_ and Uncrustify_.
+`Artistic Style`_, Uncrustify_, scalariform_ and scalafmt_.
 
 .. _`clang-format`: http://clang.llvm.org/docs/ClangFormat.html
 .. _YAPF: https://github.com/google/yapf
@@ -22,6 +22,8 @@ The currently supported formatters are `clang-format`_, YAPF_, Tidy_, indent_,
 .. _indent: http://www.freebsd.org/cgi/man.cgi?query=indent
 .. _Artistic Style: http://astyle.sourceforge.net
 .. _Uncrustify: https://github.com/uncrustify/uncrustify
+.. _scalariform: https://github.com/scala-ide/scalariform
+.. _scalafmt: https://github.com/olafurpg/scalafmt
 
 .. contents::
 
