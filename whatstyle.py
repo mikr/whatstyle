@@ -111,7 +111,7 @@ You think 'git diff' can produce superior diffs for the optimization:
 
 from __future__ import print_function
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 import sys
 
@@ -230,6 +230,7 @@ CEXTS = '.c .h'
 CPPEXTS = '.c++ .h++ .cxx .hxx .cpp .hpp .cc .hh'
 CPPCEXTS = CEXTS + ' ' + CPPEXTS
 SCALAEXTS = '.sc .scala'
+REXTS = '.r .R .RData .rds .rda'
 SUPPORTED_EXTS = [
     ['clang-format', '.m .mm .java .js .ts .proto .protodevel .td ' + CPPCEXTS],
     ['yapf', '.py'],
@@ -239,6 +240,7 @@ SUPPORTED_EXTS = [
     ['tidy', '.html .htm'],
     ['scalariform', SCALAEXTS],
     ['scalafmt', SCALAEXTS],
+    ['rfmt', REXTS],
 ]
 
 FILENAME_SUBST = '#FILENAME#'
@@ -3167,6 +3169,112 @@ class ScalafmtFormatter(CodeFormatter):
         writebinary(destfile, exeresult.stdout)
 
 # ----------------------------------------------------------------------
+
+
+class RfmtFormatter(CodeFormatter):
+    """Formatter for:
+    rfmt: A code formatter for R.
+    (https://github.com/google/rfmt)
+    """
+
+    shortname = 'rfmt'
+    configfilename = '.rfmtrc'
+    language_exts = [['R', REXTS]]
+
+    def __init__(self, exe, cache=None):
+        super(RfmtFormatter, self).__init__(exe, cache=cache)
+
+    def register_options(self):
+        # type: () -> None
+        options = []
+        for optionname, optiontype, configs in [
+            ('margin0', 'int', [0]),
+            ('margin1', 'int', [80]),
+            ('cost0', 'float', [0.01, 0.05, 0.1]),
+            ('cost1', 'float', [10, 100, 300]),
+            ('costb', 'float', [1, 2, 3, 4]),
+            ('indent', 'int', [1, 2, 3, 4]),
+            ('force_brace', 'bool', [True, False]),
+            ('space_arg_eq', 'bool', [True, False]),
+            ('adj_comment', 'float', [0.01, 0.5, 100]),
+            ('adj_flow', 'float', [0.001, 0.3, 1000.0]),
+            ('adj_call', 'float', [0.001, 0.01, 0.5, 1000]),
+            ('adj_arg', 'float', [0.01, 1, 5, 10]),
+            ('cpack', 'float', [0.0001, 0.001, 0.01, 25]),
+        ]:
+            options.append(option_make(optionname, optiontype, configs))
+        self.styledefinition = styledef_make(options)
+
+    def styletext(self, style):
+        # type: (Style) -> str
+        fragments = []
+        for optionname, value in self.sorted_style(style).items():
+            fragments.append('%s=%s' % (optionname, textrepr(value)))
+        return '\n'.join(fragments) + '\n'
+
+    def inlinestyletext(self, style):
+        # type: (Style) -> str
+        return self.styletext(style)
+
+    def cmdargs_for_style(self, formatstyle, filename=None):
+        # type: (Style, Optional[str]) -> List[str]
+        assert isinstance(formatstyle, Style)
+        cmdargs = ['--quiet', 'true']  # type: List[str]
+        for optname, value in self.sorted_style(formatstyle).items():
+            cmdargs.extend(self.cmdlineopts(optname, value))
+        return cmdargs
+
+    def cmdlineopts(self, optionname, value):
+        # type: (str, str, OptionValue) -> List[str]
+        return ['--' + optionname, textrepr(value)]
+
+    def should_report_error(self, job, jobres):
+        # type: (ExeCall, ExeResult) -> bool
+        if jobres.error is not None:
+            return True
+        return jobres.returncode != 0
+
+    def valid_job_result(self, job, jobres):
+        # type: (ExeCall, ExeResult) -> bool
+        if jobres.error is not None:
+            return False
+        if jobres.returncode != 0:
+            return False
+        return True
+
+    def variants_for(self, option):
+        # type: (Option) -> List[Style]
+
+        stylename = option_name(option)
+        configs = option_configs(option)
+
+        def kvpairs(vs):
+            # type: (Iterable[OptionValue]) -> List[Style]
+            return stylevariants(stylename, vs)
+
+        if configs:
+            return kvpairs(configs)
+        return []
+
+    def reformat(self, sourcefile, destfile, configfile):
+        # type: (str, str, str) -> None
+        formatstyle = style_make()
+        with open(configfile) as fp:
+            for line in fp.readlines():
+                line = line.rstrip()
+                if line.startswith('#'):
+                    continue
+                parts = line.split('=')
+                if len(parts) == 2:
+                    optionname, value = parts
+                    set_option(formatstyle, optionname, value)
+        sourcedata = readbinary(sourcefile)
+        data = self.formatcode(formatstyle, sourcedata, filename=sourcefile)
+        if data is None:
+            data = b''
+        writebinary(destfile, data)
+
+# ----------------------------------------------------------------------
 # Functions for the in-memory cache
 
 FILECACHE = {}  # type: Dict[str, bytes]
@@ -4610,8 +4718,7 @@ def group_consecutive(formatter, styles, condensed):
             while len(path) > 1:
                 nstyle = nstyle[path.pop(0)]
             if len(combined) > 1:
-                # When there are multiple elements they must be strings
-                values = ', '.join(combined)  # type: ignore
+                values = ', '.join([text_type(s) for s in combined])  # type: ignore
             else:
                 # This could be a nested option
                 values = combined[0]  # type: ignore
@@ -6141,6 +6248,7 @@ def formatterclass(fmtname):
         ('HTML Tidy', HtmlTidyFormatter),
         ('scalariform', ScalariformFormatter),
         ('scalafmt', ScalafmtFormatter),
+        ('rfmt', RfmtFormatter),
     ]:
         if fmtname.startswith(prefix.lower()):
             return fmtclass
@@ -6163,6 +6271,8 @@ def formatter_version(fmtpath):
         version_string = unistr(exeresult.stderr).strip()
         if version_string.startswith('indent'):
             version_string = 'indent'
+        elif version_string.startswith('usage: rfmt'):
+            version_string = 'rfmt'
         else:
             version_string = ''
     return version_string

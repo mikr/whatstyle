@@ -28,7 +28,7 @@ with open('README.rst') as f:
 
 setup(
     name='whatstyle',
-    version='0.1.1',
+    version='0.1.2',
     url='https://github.com/mikr/whatstyle',
     license='MIT',
     author='Michael Krause',
@@ -40,7 +40,7 @@ setup(
     zip_safe=False,
     platforms='any',
     keywords='formatter beautifier clang-format yapf tidy indent astyle uncrustify '
-             'scalariform scalafmt',
+             'scalariform scalafmt rfmt',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',

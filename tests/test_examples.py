@@ -160,6 +160,17 @@ class ExamplesTestCase(unittest.TestCase):
         ignore = '--ignoreopts=alignSingleLineCaseStatements.maxArrowIndent'
         self.assertMultiLineEqual('', run_spec({'files': [filename], 'extraargs': [ignore]}))
 
+    def test_rfmt(self):
+        filename = 'rfmt/test.R'
+        fmts = whatstyle.choose_formatters([filename], report=False)
+        if not fmts:
+            self.skipTest('no formatters for R installed')
+            return
+        # Use a very short column limit to give the cost functions something to work with.
+        shortlines = '--startstyle={margin1: 30}'
+        self.assertMultiLineEqual('', run_spec({'files': [filename],
+                                                'extraargs': [shortlines]}))
+
     def tearDown(self):
         global CURRENT_TEST
         CURRENT_TEST = None
