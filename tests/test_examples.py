@@ -171,6 +171,22 @@ class ExamplesTestCase(unittest.TestCase):
         self.assertMultiLineEqual('', run_spec({'files': [filename],
                                                 'extraargs': [shortlines]}))
 
+    def test_polycode(self):
+        filename = 'polydraw/intersection.rs'
+        fmts = whatstyle.choose_formatters([filename], report=False)
+        if not fmts:
+            self.skipTest('no formatters for Rust installed')
+            return
+        self.assertMultiLineEqual('', run_spec({'files': [filename]}))
+
+    def test_rustfmt(self):
+        filename = 'rustfmt/checkstyle.rs'
+        fmts = whatstyle.choose_formatters([filename], report=False)
+        if not fmts:
+            self.skipTest('no formatters for Rust installed')
+            return
+        self.assertMultiLineEqual('', run_spec({'files': [filename]}))
+
     def tearDown(self):
         global CURRENT_TEST
         CURRENT_TEST = None

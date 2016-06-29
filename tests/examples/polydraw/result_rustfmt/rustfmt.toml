@@ -1,0 +1,4 @@
+match_block_trailing_comma = true
+match_wildcard_trailing_comma = false
+max_width = 91
+tab_spaces = 3

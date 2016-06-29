@@ -111,7 +111,7 @@ You think 'git diff' can produce superior diffs for the optimization:
 
 from __future__ import print_function
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 import sys
 
@@ -231,6 +231,7 @@ CPPEXTS = '.c++ .h++ .cxx .hxx .cpp .hpp .cc .hh'
 CPPCEXTS = CEXTS + ' ' + CPPEXTS
 SCALAEXTS = '.sc .scala'
 REXTS = '.r .R .RData .rds .rda'
+RUSTEXTS = '.rs'
 SUPPORTED_EXTS = [
     ['clang-format', '.m .mm .java .js .ts .proto .protodevel .td ' + CPPCEXTS],
     ['yapf', '.py'],
@@ -241,6 +242,7 @@ SUPPORTED_EXTS = [
     ['scalariform', SCALAEXTS],
     ['scalafmt', SCALAEXTS],
     ['rfmt', REXTS],
+    ['rustfmt', RUSTEXTS],
 ]
 
 FILENAME_SUBST = '#FILENAME#'
@@ -1502,13 +1504,23 @@ class CodeFormatter(object):
             self.remove_tempfiles(GLOBALTMP)
             return
         files = self.tempfiles_for_mode(mode)
+        dirs = set()
         while files:
             filename = files.pop()
+            if os.path.isdir(filename):
+                dirs.add(filename)
+                continue
             try:
                 os.remove(filename)
             except OSError as e:
                 if e.errno != errno.ENOENT:
                     reporterror("Error({0}): {1}".format(e.errno, e.strerror))
+        while dirs:
+            d = dirs.pop()
+            try:
+                os.rmdir(d)
+            except OSError as exc:
+                reporterror('Error: cannot delete directory "%s": %s' % (d, str(exc)))
 
     def tempfile_exists(self, tmpfilename, mode=LOCALTMP):
         # type: (str, int) -> bool
@@ -3265,6 +3277,146 @@ class RfmtFormatter(CodeFormatter):
                 if line.startswith('#'):
                     continue
                 parts = line.split('=')
+                if len(parts) == 2:
+                    optionname, value = parts
+                    set_option(formatstyle, optionname, value)
+        sourcedata = readbinary(sourcefile)
+        data = self.formatcode(formatstyle, sourcedata, filename=sourcefile)
+        if data is None:
+            data = b''
+        writebinary(destfile, data)
+
+# ----------------------------------------------------------------------
+
+
+class RustfmtFormatter(CodeFormatter):
+    """Formatter for:
+    rustfmt: A tool for formatting Rust code according to style guidelines.
+    (https://github.com/rust-lang-nursery/rustfmt)
+    """
+
+    shortname = 'rustfmt'
+    configfilename = 'rustfmt.toml'
+    language_exts = [['Rust', RUSTEXTS]]
+
+    def __init__(self, exe, cache=None):
+        super(RustfmtFormatter, self).__init__(exe, cache=cache)
+
+    def register_options(self):
+        # type: () -> None
+        """Parse options from text like this:
+        Configuration Options:
+                               verbose <boolean> Default: false
+                                       Use verbose output
+
+                         skip_children <boolean> Default: false
+                                       Don't reformat out of line modules
+
+                             max_width <unsigned integer> Default: 100
+                                       Maximum width of each line
+        """
+        exeresult = run_executable(self.exe, ['--config-help'], cache=self.cache)
+        options = []
+        text = unistr(exeresult.stdout)
+        for m in re.finditer(r'^\s*([a-z_]+)\s+(.*) Default: (\w+)', text, re.MULTILINE):
+            optionname, typedesc, default = m.groups()
+            configs = []
+            if optionname in ['verbose', 'report_todo', 'report_fixme']:
+                continue
+            if typedesc == '<boolean>':
+                optiontype = 'bool'
+                configs = [True, False]
+            elif typedesc[:1] + typedesc[-1:] == '[]':
+                optiontype = 'enum'
+                configs = typedesc[1:-1].split('|')
+            elif typedesc in ['<unsigned integer>', '<signed integer>']:
+                optiontype = 'int'
+                if optionname == 'ideal_width':
+                    # Let's leave ideal_width (default 80) and only tweak max_width.
+                    continue
+                if optionname == 'max_width':
+                    configs = list(inclusiverange(80, 100))
+                elif optionname == 'tab_spaces':
+                    configs = list(inclusiverange(1, 8))
+                elif optionname == 'fn_call_width':
+                    configs = list(inclusiverange(60, 90))
+                elif optionname == 'struct_lit_width':
+                    configs = list(inclusiverange(8, 20))
+                elif optionname == 'closure_block_indent_threshold':
+                    configs = [-1] + list(inclusiverange(1, 10))
+            if not configs:
+                continue
+            options.append(option_make(optionname, optiontype, configs))
+        self.styledefinition = styledef_make(options)
+
+    def styletext(self, style):
+        # type: (Style) -> str
+        fragments = []
+        for optionname, value in self.sorted_style(style).items():
+            fragments.append('%s = %s' % (optionname, textrepr(value)))
+        return '\n'.join(fragments) + '\n'
+
+    def inlinestyletext(self, style):
+        # type: (Style) -> str
+        return self.styletext(style)
+
+    def cmdargs_for_style(self, formatstyle, filename=None):
+        # type: (Style, Optional[str]) -> List[str]
+        assert isinstance(formatstyle, Style)
+        configdata = bytestr(self.styletext(formatstyle))
+        sha = shahex(configdata)
+        cfg = os.path.join(tempfile.gettempdir(),
+                           'whatstyle_rustfmt_%s/%s' % (sha, self.configfilename))
+        try:
+            dirpath = os.path.dirname(cfg)
+            os.makedirs(dirpath)
+            self.add_tempfile(dirpath)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+        if not self.tempfile_exists(cfg):
+            writebinary(cfg, configdata)
+            self.add_tempfile(cfg)
+        cmdargs = ['--config-path', cfg]
+        return cmdargs
+
+    def should_report_error(self, job, jobres):
+        # type: (ExeCall, ExeResult) -> bool
+        if jobres.error is not None:
+            return True
+        return jobres.returncode != 0
+
+    def valid_job_result(self, job, jobres):
+        # type: (ExeCall, ExeResult) -> bool
+        if jobres.error is not None:
+            return False
+        if jobres.returncode != 0:
+            return False
+        return True
+
+    def variants_for(self, option):
+        # type: (Option) -> List[Style]
+
+        stylename = option_name(option)
+        configs = option_configs(option)
+
+        def kvpairs(vs):
+            # type: (Iterable[OptionValue]) -> List[Style]
+            return stylevariants(stylename, vs)
+
+        if configs:
+            return kvpairs(configs)
+        return []
+
+    def reformat(self, sourcefile, destfile, configfile):
+        # type: (str, str, str) -> None
+        formatstyle = style_make()
+        with open(configfile) as fp:
+            for line in fp.readlines():
+                line = line.rstrip()
+                if line.startswith('#'):
+                    continue
+                parts = re.split(r'\s+=\s+', line)
                 if len(parts) == 2:
                     optionname, value = parts
                     set_option(formatstyle, optionname, value)
@@ -6249,6 +6401,7 @@ def formatterclass(fmtname):
         ('scalariform', ScalariformFormatter),
         ('scalafmt', ScalafmtFormatter),
         ('rfmt', RfmtFormatter),
+        ('rustfmt', RustfmtFormatter),
     ]:
         if fmtname.startswith(prefix.lower()):
             return fmtclass
@@ -6267,12 +6420,24 @@ def formatter_version(fmtpath):
     if exeresult.error is not None:
         raise FormatterFailedError(exeresult.error)
     version_string = unistr(exeresult.stdout).strip()
+    orig_version_string = version_string
     if not version_string:
         version_string = unistr(exeresult.stderr).strip()
         if version_string.startswith('indent'):
             version_string = 'indent'
         elif version_string.startswith('usage: rfmt'):
             version_string = 'rfmt'
+        else:
+            version_string = ''
+
+    if not version_string or re.match(r'^\d', version_string):
+        # Call for help if we have no or only the version string without the formatter name.
+        exeresult = run_executable(fmtpath, ['--help'])
+        if exeresult.error is not None:
+            raise FormatterFailedError(exeresult.error)
+        version_string = unistr(exeresult.stdout).strip()
+        if 'rustfmt' in version_string:
+            version_string = 'rustfmt ' + orig_version_string
         else:
             version_string = ''
     return version_string
