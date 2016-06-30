@@ -100,7 +100,7 @@ tells whatstyle to log the interaction with the formatter processes:
     $ for f in $(./whatstyle.py --supported .c)
         do
           python whatstyle.py --formatter "$f" --mode resilient --cache memory \
-            --debug popenio tests/examples/xv6/printf.c >> dump.txt
+            --keeptempfiles --debug popenio tests/examples/xv6/printf.c >> dump.txt
         done ; grep -C 2 "returncode:-" dump.txt
 
 You think 'git diff' can produce superior diffs for the optimization:
@@ -1266,6 +1266,7 @@ class CodeFormatter(object):
         self.globaltempfiles = set()  # type: Set[str]
         # These are deleted after each round of attempts
         self.tempfiles = set()  # type: Set[str]
+        self.keeptempfiles = False
         self.version_string = formatter_version(exe)
 
     def register_options(self):
@@ -1499,6 +1500,8 @@ class CodeFormatter(object):
 
     def remove_tempfiles(self, mode=None):
         # type: (Optional[int]) -> None
+        if self.keeptempfiles:
+            return
         if mode is None:
             self.remove_tempfiles(LOCALTMP)
             self.remove_tempfiles(GLOBALTMP)
@@ -6680,6 +6683,7 @@ def whatstyle(args, parser):
         iprint(INFO_USER, 'Using this for comparing files: %s' % diffcmd)
         formatter.use_startstyle(args.startstyle)
         formatter.allow_encoding_change = args.allow_encoding_change
+        formatter.keeptempfiles = args.keeptempfiles
         formatter.register_options()
 
         ignoreopts = args.ignoreopts.split(',') if args.ignoreopts else []
@@ -7003,6 +7007,9 @@ def cmdline_parser(parserclass=argparse.ArgumentParser):
                         ' (default: disk)')
     parser.add_argument('--cachepath', help=argparse.SUPPRESS)
     parser.add_argument('--deletecache', action='store_true', help='delete the cache')
+    parser.add_argument('--keeptempfiles',
+                        action='store_true',
+                        help='do not delete the temp files')
     parser.add_argument('--concurrent',
                         choices=['off', 'threads', 'processes'],
                         default='processes',
