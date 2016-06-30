@@ -145,7 +145,7 @@ import shutil
 try:
     import sqlite3
 except ImportError:
-    sqlite3 = None
+    sqlite3 = None  # type: ignore
 
 import subprocess
 import tempfile
@@ -3323,7 +3323,7 @@ class RustfmtFormatter(CodeFormatter):
         text = unistr(exeresult.stdout)
         for m in re.finditer(r'^\s*([a-z_]+)\s+(.*) Default: (\w+)', text, re.MULTILINE):
             optionname, typedesc, default = m.groups()
-            configs = []
+            configs = []  # type: ignore
             if optionname in ['verbose', 'report_todo', 'report_fixme']:
                 continue
             if typedesc == '<boolean>':
@@ -4873,7 +4873,7 @@ def group_consecutive(formatter, styles, condensed):
             while len(path) > 1:
                 nstyle = nstyle[path.pop(0)]
             if len(combined) > 1:
-                values = ', '.join([text_type(s) for s in combined])  # type: ignore
+                values = ', '.join([text_type(s) for s in combined])
             else:
                 # This could be a nested option
                 values = combined[0]  # type: ignore
