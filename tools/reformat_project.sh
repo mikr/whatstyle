@@ -18,6 +18,7 @@ tests/test_examples.py
 tests/test_whatstyle.py
 tools/create_formatstyle_history.py
 tools/indent_options.py
+tools/outtakes.py
 tools/remove_resultdirs.py
 tools/show3diffs.py
 whatstyle.py
