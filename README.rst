@@ -137,3 +137,8 @@ License
 whatstyle is available under the `MIT license <http://opensource.org/licenses/MIT>`_. See the LICENSE file for more info.
 
 The project specific Open Source licenses of the source codes in tests/examples are present in their respective directories.
+
+See also
+--------
+
+`Unformat: Python3 utility to generate a .clang-format file from example code-base <https://github.com/johnmcfarlane/unformat>`_.
