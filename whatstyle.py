@@ -111,7 +111,7 @@ You think 'git diff' can produce superior diffs for the optimization:
 
 from __future__ import print_function
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 import sys
 
@@ -1863,6 +1863,8 @@ CLANG_FORMAT_EVOLUTION = """\
         Always
 # Clang 3.9
 + JavaScriptWrapImports bool
+# Clang 4.0
++ SpaceAfterTemplateKeyword bool
 """
 
 

@@ -94,7 +94,7 @@ class ParsehistoryTestCase(unittest.TestCase):
 
     def test_tabcombo(self):
         history = whatstyle.parse_style_history()
-        self.assertEqual(len(history), 50)
+        self.assertEqual(len(history), 51)
 
 
 class DiffTestCase(unittest.TestCase):
