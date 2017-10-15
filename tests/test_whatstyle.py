@@ -342,7 +342,34 @@ Language:        Cpp
 """)
         self.assertEqual(res, OrderedDict([('Language', 'Cpp'), ('BasedOnStyle', 'LLVM')]))
 
-    def test_yamllist(self):
+    def test_yaml_2(self):
+        res = whatstyle.parse_miniyaml("""\
+---
+IncludeCategories:
+  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
+    Priority:        2
+""")
+        self.assertEqual(res,
+                         OrderedDict([('IncludeCategories', [
+                             OrderedDict([('Regex', '^"(llvm|llvm-c|clang|clang-c)/'),
+                                          ('Priority', 2)])
+                         ])]))
+
+    def test_yaml_3(self):
+        res = whatstyle.parse_miniyaml("""\
+---
+IncludeCategories:
+  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
+    Priority:        2
+IndentCaseLabels: false
+""")
+        self.assertEqual(res,
+                         OrderedDict([('IncludeCategories', [
+                             OrderedDict([('Regex', '^"(llvm|llvm-c|clang|clang-c)/'),
+                                          ('Priority', 2)])
+                         ]), ('IndentCaseLabels', False)]))
+
+    def test_yaml_map_list(self):
         res = whatstyle.parse_miniyaml("""\
 ---
 Language:        Cpp
@@ -376,6 +403,30 @@ IndentCaseLabels: false
                                 ('IndentCaseLabels', False)])
         # yapf: enable
         self.assertMultiLineEqual(self.jenc(res), self.jenc(expected))
+
+    def test_yaml_inline_list(self):
+        res = whatstyle.parse_miniyaml("""\
+ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
+""")
+        # yapf: disable
+        expected = OrderedDict([('ForEachMacros', ["foreach", "Q_FOREACH", "BOOST_FOREACH"])])
+        # yapf: enable
+        self.assertMultiLineEqual(self.jenc(res), self.jenc(expected))
+
+    def test_yaml_plain_list(self):
+        res = whatstyle.parse_miniyaml("""\
+---
+ForEachMacros:
+  - foreach
+  - Q_FOREACH
+  - BOOST_FOREACH
+...
+""")
+        # yapf: disable
+        expected = OrderedDict([('ForEachMacros', ["foreach", "Q_FOREACH", "BOOST_FOREACH"])])
+        # yapf: enable
+        self.assertMultiLineEqual(self.jenc(res), self.jenc(expected))
+
 
 # ---------------------------------------------------------------
 

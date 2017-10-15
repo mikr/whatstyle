@@ -111,7 +111,7 @@ You think 'git diff' can produce superior diffs for the optimization:
 
 from __future__ import print_function
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 import sys
 
@@ -6031,9 +6031,11 @@ def parse_miniyaml(text):
                     emit(LISTELEM)
                     emit(INDENT)
                     emit(e.strip())
-                emit(DEDENT)
+                    emit(DEDENT)
             else:
                 emit(rest)
+    for i in range(len(indents)-1):
+        emit(DEDENT)
     value, tokens = parse_obj(lines)
     return value
 
@@ -6044,7 +6046,10 @@ def parse_obj(tokens):
         return None, tokens
     tok = tokens[0]
     if tok == INDENT:
-        return parse_obj(tokens[1:])
+        value, tokens2 = parse_obj(tokens[1:])
+        if tokens2[0] != DEDENT:
+            return None, tokens
+        return value, tokens2[1:]
     if len(tok) >= 2 and tok[0] in '\"\'':
         # Parse a string
         c = tok[0]
@@ -6070,7 +6075,7 @@ def parse_obj(tokens):
             melems[key] = value2
             mtokens = mtokens2
         if not mtokens or mtokens[0] == DEDENT:
-            return melems, mtokens[1:]
+            return melems, mtokens
 
     seqelems = []  # type: List[Any]
     seqtokens = tokens
@@ -6081,8 +6086,11 @@ def parse_obj(tokens):
         if value3 is not None:
             seqelems.append(value3)
             seqtokens = seqtokens2
-        if not seqtokens or seqtokens[0] == DEDENT:
-            return seqelems, seqtokens[1:]
+        if not seqtokens or seqtokens[0] != DEDENT:
+            return None, tokens
+        seqtokens = seqtokens[1:]
+    if seqelems:
+        return seqelems, seqtokens
     # scalar value
     return tokens[0], tokens[1:]
 
