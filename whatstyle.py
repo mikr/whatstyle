@@ -1865,6 +1865,102 @@ CLANG_FORMAT_EVOLUTION = """\
 + JavaScriptWrapImports bool
 # Clang 4.0
 + SpaceAfterTemplateKeyword bool
+# Clang 4.0
++ Language LanguageKind
+        None
+        Cpp
+        Java
+        JavaScript
+        ObjC
+        Proto
+        TableGen
+# Clang 5
++ FixNamespaceComments bool
+# Clang 5
++ BreakBeforeInheritanceComma bool
+# Clang 5
+- AlignEscapedNewlinesLeft bool
++ AlignEscapedNewlines EscapedNewlineAlignmentStyle
+        DontAlign
+        Left
+        Right
+# Clang 5
++ PenaltyBreakAssignment unsigned
+# Clang 5
+- BreakConstructorInitializersBeforeComma bool
++ AllowShortFunctionsOnASingleLine ShortFunctionStyle
+        None
+        InlineOnly
+        Empty
+        Inline
+        All
++ BraceWrapping BraceWrappingFlags
+        bool AfterClass
+        bool AfterControlStatement
+        bool AfterEnum
+        bool AfterFunction
+        bool AfterNamespace
+        bool AfterObjCDeclaration
+        bool AfterStruct
+        bool AfterUnion
+        bool BeforeCatch
+        bool BeforeElse
+        bool IndentBraces
+        bool SplitEmptyFunctionBody
++ BreakConstructorInitializers BreakConstructorInitializersStyle
+        BeforeColon
+        BeforeComma
+        AfterColon
++ CompactNamespaces bool
+# Clang 5
++ SortUsingDeclarations bool
+# Clang 5
++ BraceWrapping BraceWrappingFlags
+        bool AfterClass
+        bool AfterControlStatement
+        bool AfterEnum
+        bool AfterFunction
+        bool AfterNamespace
+        bool AfterObjCDeclaration
+        bool AfterStruct
+        bool AfterUnion
+        bool BeforeCatch
+        bool BeforeElse
+        bool IndentBraces
+        bool SplitEmptyFunction
+        bool SplitEmptyRecord
+        bool SplitEmptyNamespace
+# Clang 5
++ Language LanguageKind
+        None
+        Cpp
+        Java
+        JavaScript
+        ObjC
+        Proto
+        TableGen
+        TextProto
+# Clang 6
++ IndentPPDirectives PPDirectiveIndentStyle
+        None
+        AfterHash
+# Clang 6
++ BraceWrapping BraceWrappingFlags
+        bool AfterClass
+        bool AfterControlStatement
+        bool AfterEnum
+        bool AfterFunction
+        bool AfterNamespace
+        bool AfterObjCDeclaration
+        bool AfterStruct
+        bool AfterUnion
+        bool AfterExternBlock
+        bool BeforeCatch
+        bool BeforeElse
+        bool IndentBraces
+        bool SplitEmptyFunction
+        bool SplitEmptyRecord
+        bool SplitEmptyNamespace
 """
 
 
