@@ -202,7 +202,10 @@ def parse_styles(clangworkdir):
                     # NoStyle is not a style named No.
                     base_formats.append(formatname)
 
-        options, unknown_optiontypes = parse_options(format_h_lines)
+        try:
+            options, unknown_optiontypes = parse_options(format_h_lines)
+        except Exception:
+            continue
         for t in unknown_optiontypes:
             unknown_types.add(t)
         style_options = []
