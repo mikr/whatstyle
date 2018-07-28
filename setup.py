@@ -28,7 +28,7 @@ with open('README.rst') as f:
 
 setup(
     name='whatstyle',
-    version='0.1.5',
+    version='0.1.6',
     url='https://github.com/mikr/whatstyle',
     license='MIT',
     author='Michael Krause',
@@ -54,6 +54,7 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Software Development :: Quality Assurance',
         'Topic :: Utilities',

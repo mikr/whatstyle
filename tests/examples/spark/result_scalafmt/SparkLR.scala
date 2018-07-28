@@ -63,7 +63,9 @@ object SparkLR {
 
     showWarning()
 
-    val spark = SparkSession.builder.appName("SparkLR").getOrCreate()
+    val spark = SparkSession.builder
+      .appName("SparkLR")
+      .getOrCreate()
 
     val numSlices = if (args.length > 0) args(0).toInt else 2
     val points = spark.sparkContext.parallelize(generateData, numSlices).cache()
@@ -86,4 +88,3 @@ object SparkLR {
   }
 }
 // scalastyle:on println
-

@@ -1,2 +1,2 @@
---style Scala.js
---maxColumn 81
+style = Scala.js
+includeCurlyBraceInSelectChains = false

@@ -111,7 +111,7 @@ You think 'git diff' can produce superior diffs for the optimization:
 
 from __future__ import print_function
 
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 
 import sys
 
@@ -3158,6 +3158,57 @@ class ScalariformFormatter(CodeFormatter):
 
 # ----------------------------------------------------------------------
 
+SCALAFMT_OPTIONS = """\
+maxColumn = 80
+project.git = false
+align.openParenCallSite = true
+align.openParenDefnSite = true
+align.ifWhileOpenParen = true
+align.arrowEnumeratorGenerator = false
+continuationIndent.callSite = 2
+continuationIndent.defnSite = 4
+continuationIndent.extendSite = 4
+optIn.breaksInsideChains = false
+optIn.blankLineBeforeDocstring = false
+optIn.selfAnnotationNewline = true
+optIn.annotationNewlines = true
+optIn.breakChainOnFirstMethodDot = true
+optIn.configStyleArguments = true
+assumeStandardLibraryStripMargin = false
+newlines.alwaysBeforeMultilineDef = true
+newlines.afterImplicitKWInVerticalMultiline = false
+newlines.alwaysBeforeElseAfterCurlyIf = false
+newlines.neverInResultType = false
+newlines.sometimesBeforeColonInMethodReturnType = true
+newlines.alwaysBeforeTopLevelStatements = false
+newlines.afterCurlyLambda = never
+newlines.penalizeSingleSelectMultiArgList = true
+newlines.neverBeforeJsNative = false
+newlines.alwaysBeforeCurlyBraceLambdaParams = false
+newlines.beforeImplicitKWInVerticalMultiline = false
+unindentTopLevelOperators = false
+poorMansTrailingCommasInConfigStyle = false
+docstrings = ScalaDoc
+lineEndings = unix
+rewrite.redundantBraces.methodBodies = true
+rewrite.redundantBraces.stringInterpolation = false
+rewrite.redundantBraces.generalExpressions = false
+rewrite.redundantBraces.includeUnitMethods = true
+danglingParentheses = false
+includeCurlyBraceInSelectChains = true
+binPack.unsafeCallSite = false
+binPack.unsafeDefnSite = false
+binPack.literalArgumentLists = true
+binPack.parentConstructors = false
+indentYieldKeyword = true
+importSelectors = noBinPack
+verticalMultilineAtDefinitionSite = false
+spaces.inByNameTypes = true
+spaces.afterTripleEquals = false
+spaces.inImportCurlyBraces = false
+spaces.inParentheses = false
+spaces.afterKeywordBeforeParen = true
+"""
 
 class ScalafmtFormatter(CodeFormatter):
     """Formatter for:
@@ -3168,7 +3219,7 @@ class ScalafmtFormatter(CodeFormatter):
     shortname = 'scalafmt'
     _prefer_basestyle = True
     base_optionname = 'style'
-    base_styles = 'Scala.js default defaultWithAlign'.split()
+    base_styles = 'default IntelliJ Scala.js'.split()
     configfilename = '.scalafmt'
     language_exts = [['SCALA', SCALAEXTS]]
 
@@ -3177,55 +3228,37 @@ class ScalafmtFormatter(CodeFormatter):
 
     def register_options(self):
         # type: () -> None
-        """Parse options from text like this:
-          --maxColumn <value>
-                See ScalafmtStyle scaladoc.
-          --continuationIndentCallSite <value>
-                See ScalafmtStyle scaladoc.
-        """
-        exeresult = run_executable(self.exe, ['--help'], cache=self.cache)
         options = [option_make(self.base_optionname, 'string', self.base_styles)]
-        options.append(option_make('docs', 'string', ['java', 'scala']))
-        text = unistr(exeresult.stdout)
-
-        def allcombinations(elements):
-            # type: (Sequence[Any]) -> List[Any]
-            result = []  # type: List[Any]
-            for i in range(1, len(elements) + 1):
-                result.extend(itertools.combinations(elements, i))
-            return result
-
-        for m in re.finditer(r'^  --([a-zA-Z]+) <value>', text, re.MULTILINE):
-            optionname = m.group(1)
+        for line in SCALAFMT_OPTIONS.splitlines():
+            optionname, optvalue = re.split(r'\s*=\s*', line)
             if optionname == 'maxColumn':
                 optiontype = 'int'
                 configs = list(inclusiverange(80, 100))  # type: List[OptionValue]
             elif optionname.startswith('continuationIndent'):
                 optiontype = 'int'
                 configs = [2, 4, 8]
-            elif optionname in ['javaDocs', 'scalaDocs']:
-                continue
-            else:
+            elif optionname == 'docstrings':
+                optiontype = 'enum'
+                configs = ['ScalaDoc', 'JavaDoc']
+            elif optionname == 'lineEndings':
+                optiontype = 'enum'
+                configs = ['preserve', 'unix', 'windows']
+            elif optionname == 'importSelectors':
+                optiontype = 'enum'
+                configs = ['binPack', 'noBinPack', 'singleLine']
+            elif optvalue in ['true', 'false']:
                 optiontype = 'bool'
                 configs = [True, False]
+            else:
+                continue
             options.append(option_make(optionname, optiontype, configs))
-        m = re.search(unistr(r'    (=>...........*)'), text, re.MULTILINE)
-        if m:
-            aligntokens = m.group(1).split(',')
-            configs = [','.join(c) for c in allcombinations(aligntokens)]
-            options.append(option_make('alignTokens', 'string', configs))
-        m = re.search(unistr(r'    --rewriteTokens (\S+)'), text, re.MULTILINE)
-        if m:
-            rewritetokens = m.group(1).split(',')
-            configs = [','.join(c) for c in allcombinations(rewritetokens)]
-            options.append(option_make('rewriteTokens', 'string', configs))
         self.styledefinition = styledef_make(options)
 
     def styletext(self, style):
         # type: (Style) -> str
         fragments = []
         for optionname, value in self.sorted_style(style).items():
-            fragments.append(' '.join(self.cmdlineopts(optionname, value)))
+            fragments.append('%s = %s' % (optionname, textrepr(value)))
         return '\n'.join(fragments) + '\n'
 
     def inlinestyletext(self, style):
@@ -3235,16 +3268,16 @@ class ScalafmtFormatter(CodeFormatter):
     def cmdargs_for_style(self, formatstyle, filename=None):
         # type: (Style, Optional[str]) -> List[str]
         assert isinstance(formatstyle, Style)
-        cmdargs = []  # type: List[str]
+        cmdargs = []
+        for optname, value in self.sorted_style(formatstyle).items():
+            cmdargs.append('%s=%s' % (optname, textrepr(value)))
+        config_str = '{%s}' % ','.join(cmdargs)
+        cmdargs = ['--stdin', '--stdout', '--config-str', config_str]
+        return cmdargs
+
         for optname, value in self.sorted_style(formatstyle).items():
             cmdargs.extend(self.cmdlineopts(optname, value))
         return cmdargs
-
-    def cmdlineopts(self, optionname, value):
-        # type: (str, str, OptionValue) -> List[str]
-        if optionname == 'docs':
-            return ['--%sDocs' % value]
-        return ['--' + optionname, textrepr(value)]
 
     def should_report_error(self, job, jobres):
         # type: (ExeCall, ExeResult) -> bool
@@ -3277,7 +3310,7 @@ class ScalafmtFormatter(CodeFormatter):
     def reformat(self, sourcefile, destfile, configfile):
         # type: (str, str, str) -> None
         data = readbinary(sourcefile)
-        exeresult = run_executable(self.exe, ['--config', unifilename(configfile)],
+        exeresult = run_executable(self.exe, ['--stdin', '--stdout', '--config', unifilename(configfile)],
                                    stdindata=data)
         writebinary(destfile, exeresult.stdout)
 
