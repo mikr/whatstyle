@@ -117,10 +117,12 @@ def gitcat(cwd, commit, filename):
     return stdout
 
 
-def git_commits(cwd, relpath):
+def git_commits(cwd, *relpaths):
     """Return a list of commit hashes for relpath sorted from newest to oldest.
     """
-    ret, stdout, stderr = gitcmd(['-C', cwd, 'log', '--pretty=oneline', relpath])
+    args = ['-C', cwd, 'log', '--pretty=oneline']
+    args.extend(relpaths)
+    ret, stdout, stderr = gitcmd(args)
     lines = unistr(stdout).splitlines()
     return list([l.split()[0] for l in lines])
 
@@ -130,14 +132,15 @@ def git_format_commits(cwd):
     (commithash, content of Format.h, content of docs/conf.py)
     for each commit of Format.h.
     """
-    relpath = 'include/clang/Format/Format.h'
-    for commit in reversed(git_commits(cwd, relpath)):
-        format_h = unistr(gitcat(cwd, commit, relpath))
+    relpaths = 'include/clang/Format/Format.h include/clang/Tooling/Inclusions/IncludeStyle.h'.split()
+    for commit in reversed(git_commits(cwd, *relpaths)):
+        format_h = unistr(gitcat(cwd, commit, relpaths[0]))
+        includestyle_h = unistr(gitcat(cwd, commit, relpaths[1]))
         conf_py = unistr(gitcat(cwd, commit, 'docs/conf.py'))
-        yield commit, format_h, conf_py
+        yield commit, format_h, includestyle_h, conf_py
 
 
-def parse_options(format_h_lines):
+def parse_options(format_h_lines, includestyle_h):
     """Parses the options from the lines of Format.h
     by using a modified version of clangs dumpformatoption.py.
 
@@ -148,7 +151,8 @@ def parse_options(format_h_lines):
     def isknownoptiontype(optiontype):
         is_known_type = optiontype in [
             'bool', 'unsigned', 'int', 'std::string', 'std::vector<std::string>',
-            'std::vector<IncludeCategory>', 'std::vector<std::pair<std::string, unsigned>>'
+            'std::vector<IncludeCategory>', 'std::vector<RawStringFormat>',
+            'std::vector<std::pair<std::string, unsigned>>'
         ]
         if is_known_type:
             return True
@@ -159,6 +163,10 @@ def parse_options(format_h_lines):
         return False
 
     options = dumpformatoptions.read_options(format_h_lines, isknownoptiontype)
+    try:
+        options += dumpformatoptions.read_options(includestyle_h, isknownoptiontype)
+    except Exception as exc:
+        pass
     options = sorted(options, key=lambda x: x.name)
     return options, unknown_optiontypes
 
@@ -181,7 +189,7 @@ def parse_styles(clangworkdir):
     unknown_types = set()
 
     style_versions = []
-    for commit, format_h, conf_py in git_format_commits(clangworkdir):
+    for commit, format_h, includestyle_h, conf_py in git_format_commits(clangworkdir):
         base_formats = []
         release = commit
         # Use the clang version number instead of the commithash
@@ -203,7 +211,7 @@ def parse_styles(clangworkdir):
                     base_formats.append(formatname)
 
         try:
-            options, unknown_optiontypes = parse_options(format_h_lines)
+            options, unknown_optiontypes = parse_options(format_h_lines, includestyle_h)
         except Exception:
             continue
         for t in unknown_optiontypes:

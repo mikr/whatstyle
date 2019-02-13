@@ -1961,6 +1961,43 @@ CLANG_FORMAT_EVOLUTION = """\
         bool SplitEmptyFunction
         bool SplitEmptyRecord
         bool SplitEmptyNamespace
+# Clang 6
++ RawStringFormats std::vector<RawStringFormat>
+# Clang 6
++ IncludeBlocks IncludeBlocksStyle
+        Preserve
+        Merge
+        Regroup
+# Clang 7
++ ObjCBinPackProtocolList BinPackStyle
+        Auto
+        Always
+        Never
+# Clang 7
++ SpaceBeforeCtorInitializerColon bool
++ SpaceBeforeInheritanceColon bool
++ SpaceBeforeRangeBasedForLoopColon bool
+# Clang 7
+- IncludeBlocks IncludeBlocksStyle
+        Preserve
+        Merge
+        Regroup
+- IncludeCategories std::vector<IncludeCategory>
+- IncludeIsMainRegex std::string
+# Clang 7
++ AlwaysBreakTemplateDeclarations BreakTemplateDeclarationsStyle
+        No
+        MultiLine
+        Yes
++ PenaltyBreakTemplateDeclaration unsigned
+# Clang 7
+- BreakBeforeInheritanceComma bool
++ BreakInheritanceList BreakInheritanceListStyle
+        BeforeColon
+        BeforeComma
+        AfterColon
+# Clang 7
++ SpaceBeforeCpp11BracedList bool
 """
 
 

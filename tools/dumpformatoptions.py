@@ -6,6 +6,7 @@
 import re
 
 FORMAT_STYLE_FILE = '../../include/clang/Format/Format.h'
+INCLUDE_STYLE_FILE = '../../include/clang/Tooling/Inclusions/IncludeStyle.h'
 DOC_FILE = '../ClangFormatStyleOptions.rst'
 
 
@@ -111,7 +112,7 @@ def read_options(header, isknownoptiontype_func):
   for line in header:
     line = line.strip()
     if state == State.BeforeStruct:
-      if line == 'struct FormatStyle {':
+      if line == 'struct FormatStyle {' or line == 'struct IncludeStyle {':
         state = State.InStruct
     elif state == State.InStruct:
       if line.startswith('///'):
