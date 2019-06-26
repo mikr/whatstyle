@@ -111,7 +111,7 @@ You think 'git diff' can produce superior diffs for the optimization:
 
 from __future__ import print_function
 
-__version__ = '0.1.6'
+__version__ = '0.1.8'
 
 import sys
 
@@ -2776,6 +2776,21 @@ class UncrustifyFormatter(CodeFormatter):
 
         indent_align_string                       { False, True }
           Whether to indent strings broken by '\' so that they line up
+
+        # The format changed with uncrustify 0.68 as follows:
+        # Uncrustify-0.69.0_f
+        # The type of line endings.
+        #
+        # Default: auto
+        newlines                        = auto     # lf/crlf/cr/auto
+
+        # The original size of tabs in the input.
+        #
+        # Default: 8
+        input_tab_size                  = 8        # unsigned number
+
+        # Whether to indent strings broken by '\' so that they line up.
+        indent_align_string             = false    # true/false
         """
         exeresult = run_executable(self.exe, ['--show-config'], cache=self.cache)
         options = []
@@ -2786,9 +2801,23 @@ class UncrustifyFormatter(CodeFormatter):
                 optiontype = 'Enum'
                 configs = optiondesc[1:-1].strip().split(', ')
                 configs = [c.lower() for c in configs]
-            else:
+            elif optiondesc in ['Number', 'String', 'Unsigned Number']:
                 optiontype = optiondesc
                 configs = []
+            else:
+                # New format >= uncrustify 0.68
+                parts = optiondesc.split('#')
+                if len(parts) <= 1:
+                    continue
+                configs = parts[-1].strip().split('/')
+                if len(configs) >= 2:
+                    # options as in lf/crlf/cr/auto for example.
+                    optiontype = 'Enum'
+                    configs = [c.lower() for c in configs]
+                else:
+                    # number, unsigned number or string
+                    optiontype = configs[0].title()
+                    configs = []
             options.append(option_make(optionname, optiontype, configs))
         self.styledefinition = styledef_make(options)
 
@@ -2906,7 +2935,7 @@ class UncrustifyFormatter(CodeFormatter):
             return kvpairs(usefulvalues)
 
         # All of the following should be options of type number.
-        if styletype != 'Number':
+        if styletype not in ['Number', 'Unsigned Number']:
             return []
 
         for nameset, values in self.num_tables:
