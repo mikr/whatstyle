@@ -111,7 +111,7 @@ You think 'git diff' can produce superior diffs for the optimization:
 
 from __future__ import print_function
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 import sys
 
@@ -155,9 +155,11 @@ import time
 try:
     from urlparse import urljoin
     from urllib import pathname2url  # type: ignore
+    from cgi import escape
 except ImportError:
     from urllib.parse import urljoin  # type: ignore
     from urllib.request import pathname2url
+    from html import escape
 import traceback
 import types
 import warnings
@@ -4541,7 +4543,7 @@ def generate_ansihtml(source):
         classtext = ' '.join(classes)
         if classtext:
             classtext = ' class="%s"' % classtext
-        esctext = cgi.escape(textfragment)
+        esctext = escape(textfragment)
         # Replace spaces with non-breaking spaces in whitespace-only texts.
         esctext = esctext.replace(' ', '&nbsp;')
         return '<span%s>%s</span>' % (classtext, esctext)
@@ -4652,7 +4654,7 @@ def show_variants(style,               # type: Style
     sys.stderr.flush()
     alltables = []
     htmldiffer = HtmlMultiDiff(tabsize=8, wrapcolumn=wrapcolumn)
-    headerhtml = '<pre>' + cgi.escape(unistr(fmtheader)) + '</pre>'
+    headerhtml = '<pre>' + escape(unistr(fmtheader)) + '</pre>'
     legend = display == 'html'
     prev_progress = ''
     prev_tidx = None
@@ -5003,7 +5005,7 @@ def styles_to_html(formatter, styles, condensed):
     # type: (CodeFormatter, Iterable[Style], bool) -> str
     equivalents = condense_option_values(formatter, styles, condensed)
     styletexts = [formatter.styletext(s) for s in equivalents if s]
-    fragments = [cgi.escape(unistr(e)) for e in styletexts]
+    fragments = [escape(unistr(e)) for e in styletexts]
     or_join = unistr("------------ or ------------\n").join
     html = '<pre>' + or_join(fragments).replace('\n', '<br/>') + '</pre>'
     return html
