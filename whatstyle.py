@@ -6598,6 +6598,7 @@ def formatterclass(fmtname):
     fmtname = fmtname.lower()
     for prefix, fmtclass in [
         ('clang-format', ClangFormatter),
+        ('Ubuntu clang-format', ClangFormatter),
         ('LLVM', ClangFormatter),
         ('yapf', YapfFormatter),
         ('uncrustify', UncrustifyFormatter),
