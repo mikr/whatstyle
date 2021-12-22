@@ -6596,25 +6596,28 @@ def formatterclass(fmtname):
     'yapf' or a version string like 'clang-format version 3.9.0 (trunk)'.
     """
     fmtname = fmtname.lower()
-    for prefix, fmtclass in [
-        ('clang-format', ClangFormatter),
-        ('LLVM', ClangFormatter),
-        ('yapf', YapfFormatter),
-        ('uncrustify', UncrustifyFormatter),
-        ('indent', IndentFormatter),
-        ('gindent', IndentFormatter),
-        ('GNU indent', IndentFormatter),
-        ('astyle', ArtisticStyleFormatter),
-        ('Artistic Style', ArtisticStyleFormatter),
-        ('tidy', HtmlTidyFormatter),
-        ('HTML Tidy', HtmlTidyFormatter),
-        ('scalariform', ScalariformFormatter),
-        ('scalafmt', ScalafmtFormatter),
-        ('rfmt', RfmtFormatter),
-        ('rustfmt', RustfmtFormatter),
-    ]:
-        if fmtname.startswith(prefix.lower()):
-            return fmtclass
+    for check in ['start', 'contains']:
+        for prefix, fmtclass in [
+            ('clang-format', ClangFormatter),
+            ('LLVM', ClangFormatter),
+            ('yapf', YapfFormatter),
+            ('uncrustify', UncrustifyFormatter),
+            ('indent', IndentFormatter),
+            ('gindent', IndentFormatter),
+            ('GNU indent', IndentFormatter),
+            ('astyle', ArtisticStyleFormatter),
+            ('Artistic Style', ArtisticStyleFormatter),
+            ('tidy', HtmlTidyFormatter),
+            ('HTML Tidy', HtmlTidyFormatter),
+            ('scalariform', ScalariformFormatter),
+            ('scalafmt', ScalafmtFormatter),
+            ('rfmt', RfmtFormatter),
+            ('rustfmt', RustfmtFormatter),
+        ]:
+            if check == 'start' and fmtname.startswith(prefix.lower()):
+                return fmtclass
+            elif check == 'contains' and fmtname.find(prefix.lower()) >= 0:
+                return fmtclass
     return None
 
 
